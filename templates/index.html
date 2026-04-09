@@ -174,6 +174,47 @@
             text-align: center;
             padding: 40px;
         }
+        .post-image {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 15px;
+            object-fit: cover;
+        }
+        .file-upload-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-input {
+            font-size: 14px;
+            color: #666;
+        }
+        .post-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 15px;
+        }
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .action-btn:hover {
+            color: #1a1a1a;
+        }
+        .action-btn.liked {
+            color: #e0245e; /* Цвет красного сердечка */
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -204,9 +245,14 @@
 
             {% if current_user.is_authenticated %}
                 <!-- Форма создания поста -->
-                <form class="card create-post-card" action="/create_post" method="POST">
-                    <textarea class="create-post-input" name="content" rows="3" placeholder="Что у вас нового, {{ current_user.username }}?" required></textarea>
-                    <button type="submit" class="post-btn">Опубликовать</button>
+                <form class="card create-post-card" action="/create_post" method="POST" enctype="multipart/form-data">
+                    <textarea class="create-post-input" name="content" rows="3" placeholder="Что у вас нового, {{ current_user.username }}?"></textarea>
+
+                    <div class="file-upload-container">
+                        <!-- Поле для выбора файла (принимает только картинки) -->
+                        <input type="file" name="image" class="file-input" accept="image/*">
+                        <button type="submit" class="post-btn">Опубликовать</button>
+                    </div>
                 </form>
             {% else %}
                 <div class="card login-prompt">
@@ -229,6 +275,42 @@
                     </div>
                     <div class="post-content">
                         {{ post.content }}
+                    </div>
+
+                    <!-- КАРТИНКА (теперь она строго одна!) -->
+                    {% if post.image_file %}
+                        <img src="{{ url_for('static', filename='uploads/' + post.image_file) }}" alt="Фото поста" class="post-image">
+                    {% endif %}
+
+                    <!-- Панель кнопок под постом -->
+                    <div class="post-actions">
+                        <!-- ПРАВИЛЬНАЯ ЛОГИКА ПРОСЧЕТА ЛАЙКА (через namespace) -->
+                        {% set ns = namespace(liked=false) %}
+                        {% if current_user.is_authenticated %}
+                            {% for like in post.likes %}
+                                {% if like.user_id == current_user.id %}
+                                    {% set ns.liked = true %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Сама кнопка -->
+                        {% if current_user.is_authenticated %}
+                            <!-- Если лайк стоит, добавляем класс 'liked' (красный цвет) -->
+                            <a href="/like/{{ post.id }}" class="action-btn {% if ns.liked %}liked{% endif %}">
+                                {% if ns.liked %}
+                                    ❤️
+                                {% else %}
+                                    🤍
+                                {% endif %}
+                                {{ post.likes|length }}
+                            </a>
+                        {% else %}
+                            <!-- Если не авторизован, при клике кидаем на страницу входа -->
+                            <a href="/login" class="action-btn">
+                                🤍 {{ post.likes|length }}
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             {% else %}
