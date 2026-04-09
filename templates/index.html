@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Nookly - Лента</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Светлый фон для основного приложения */
+        body {
+            background-color: #f4f7f6;
+            color: #1a1a1a;
+        }
+
+        /* Сетка дашборда (Левое меню, Центр, Правое меню) */
+        .app-container {
+            display: grid;
+            grid-template-columns: 240px minmax(400px, 600px) 280px;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            align-items: start;
+        }
+
+        /* Общий стиль для всех белых карточек */
+        .card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+            margin-bottom: 20px;
+        }
+
+        /* --- ЛЕВОЕ МЕНЮ (Сайдбар) --- */
+        .sidebar {
+            position: sticky;
+            top: 40px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            padding-left: 10px;
+        }
+        .menu-item {
+            display: block;
+            padding: 12px 16px;
+            color: #666;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 12px;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+        }
+        .menu-item:hover, .menu-item.active {
+            background: linear-gradient(135deg, #e0f9f3 0%, #d1f4ec 100%);
+            color: #004d40;
+        }
+
+        /* --- ЦЕНТРАЛЬНАЯ ЧАСТЬ (Лента) --- */
+        .feed-header {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        /* Форма создания поста */
+        .create-post-card {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            /* Мятное свечение вокруг формы создания */
+            box-shadow: 0 10px 40px rgba(158, 235, 221, 0.2);
+        }
+        .create-post-input {
+            width: 100%;
+            border: none;
+            background: #f8fafb;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 15px;
+            resize: none; /* Запрещаем растягивать */
+            outline: none;
+        }
+        .create-post-input:focus {
+            background: #fff;
+            box-shadow: inset 0 0 0 2px #9eebdd;
+        }
+        .post-btn {
+            align-self: flex-end;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%);
+            color: #004d40;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .post-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Карточка самого поста */
+        .post-card {
+            transition: transform 0.2s;
+        }
+        .post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(158, 235, 221, 0.15);
+        }
+        .post-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #004d40;
+            font-size: 18px;
+        }
+        .post-author {
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .post-time {
+            color: #888;
+            font-size: 12px;
+        }
+        .post-content {
+            font-size: 15px;
+            line-height: 1.5;
+            color: #333;
+        }
+
+        /* --- ПРАВАЯ ЧАСТЬ (Рекомендации) --- */
+        .right-sidebar {
+            position: sticky;
+            top: 40px;
+        }
+        .widget-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .topic-item {
+            padding: 8px 0;
+            color: #555;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .topic-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Заглушка для неавторизованных */
+        .login-prompt {
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+
+        <!-- ЛЕВАЯ КОЛОНКА -->
+        <div class="sidebar">
+            <div class="logo">Nookly</div>
+            <nav>
+                <a href="/" class="menu-item active">🏠 Главная</a>
+                <a href="#" class="menu-item">🔥 Популярное</a>
+                <a href="#" class="menu-item">💬 Сообщества</a>
+
+                {% if current_user.is_authenticated %}
+                    <br><br>
+                    <a href="/logout" class="menu-item" style="color: #d93025;">🚪 Выйти</a>
+                {% else %}
+                    <br><br>
+                    <a href="/login" class="menu-item" style="color: #1e8e3e;">🔑 Войти</a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА -->
+        <div class="feed">
+            <h1 class="feed-header">Посты</h1>
+
+            {% if current_user.is_authenticated %}
+                <!-- Форма создания поста -->
+                <form class="card create-post-card" action="/create_post" method="POST">
+                    <textarea class="create-post-input" name="content" rows="3" placeholder="Что у вас нового, {{ current_user.username }}?" required></textarea>
+                    <button type="submit" class="post-btn">Опубликовать</button>
+                </form>
+            {% else %}
+                <div class="card login-prompt">
+                    <h3>Войдите, чтобы создавать посты</h3>
+                    <p style="color: #888; margin-top: 10px;">Присоединяйтесь к Nookly прямо сейчас!</p>
+                </div>
+            {% endif %}
+
+            <!-- Лента постов -->
+            {% for post in posts %}
+                <div class="card post-card">
+                    <div class="post-header">
+                        <!-- Берем первую букву имени для аватарки -->
+                        <div class="avatar">{{ post.author.username[0]|upper }}</div>
+                        <div>
+                            <div class="post-author">{{ post.author.username }}</div>
+                            <!-- Форматируем время в читаемый вид -->
+                            <div class="post-time">{{ post.date_posted.strftime('%d.%m.%Y в %H:%M') }}</div>
+                        </div>
+                    </div>
+                    <div class="post-content">
+                        {{ post.content }}
+                    </div>
+                </div>
+            {% else %}
+                <div class="card" style="text-align: center; padding: 40px; color: #888;">
+                    Пока нет ни одного поста. Станьте первым!
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА -->
+        <div class="right-sidebar">
+            <div class="card">
+                <div class="widget-title">Популярные темы</div>
+                <div class="topic-item">1. #БлогерствоДляНачинающих</div>
+                <div class="topic-item">2. #ДизайнИнтерфейсов</div>
+                <div class="topic-item">3. #PythonFlask</div>
+                <div class="topic-item">4. #NooklyТоп</div>
+            </div>
+
+            <div class="card" style="background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); text-align: center; border: none;">
+                <div class="widget-title" style="color: #004d40;">Nookly Premium</div>
+                <p style="font-size: 13px; color: #004d40; margin-bottom: 10px;">Поддержите проект и получите галочку!</p>
+                <button style="background: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; color: #004d40; cursor: pointer;">Узнать больше</button>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
