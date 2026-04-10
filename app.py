@@ -28,18 +28,28 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(200), nullable=False)
     posts = db.relationship('Post', backref='author', lazy=True)
 
+class Like(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text, nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    author = db.relationship('User', backref='user_comments')
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     image_file = db.Column(db.String(100), nullable=True)
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    views = db.Column(db.Integer, default=0)
     likes = db.relationship('Like', backref='post', lazy=True, cascade="all, delete-orphan")
-
-class Like(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    comments = db.relationship('Comment', backref='post', lazy=True, cascade="all, delete-orphan")
 
 
 # Эта функция помогает Flask-Login находить пользователя в базе по его ID в сессии
@@ -52,9 +62,16 @@ def load_user(user_id):
 # 1. Главная страница (Лента постов)
 @app.route('/')
 def index():
-    # Получаем все посты из базы данных, сортируем по дате (самые новые сверху)
-    posts = Post.query.order_by(Post.date_posted.desc()).all()
-    return render_template('index.html', posts=posts)
+    page = request.args.get('page', 1, type=int)
+    # Отдаем по 5 постов на страницу
+    posts_pagination = Post.query.order_by(Post.date_posted.desc()).paginate(page=page, per_page=5)
+
+    # Накручиваем просмотры
+    for post in posts_pagination.items:
+        post.views += 1
+    db.session.commit()
+
+    return render_template('index.html', posts_pagination=posts_pagination)
 
 # Новый роут для создания поста
 @app.route('/create_post', methods=['POST'])
@@ -150,6 +167,32 @@ def like_post(post_id):
     db.session.commit()
     # Возвращаемся на главную страницу, где были
     return redirect(url_for('index'))
+
+
+# 6. Посты
+@app.route('/post/<int:post_id>')
+def view_post(post_id):
+    # Ищем пост в базе. Если такого ID нет, Flask сам выдаст ошибку 404
+    post = Post.query.get_or_404(post_id)
+
+    # Добавим +1 просмотр за то, что человек открыл пост полностью
+    post.views += 1
+    db.session.commit()
+
+    return render_template('post.html', post=post)
+
+
+# 7. Комментарий
+@app.route('/comment/<int:post_id>', methods=['POST'])
+@login_required
+def add_comment(post_id):
+    text = request.form.get('text')
+    if text:
+        new_comment = Comment(text=text, post_id=post_id, user_id=current_user.id)
+        db.session.add(new_comment)
+        db.session.commit()
+    # Теперь редирект идет на страницу поста, а не на главную!
+    return redirect(url_for('view_post', post_id=post_id))
 
 
 if __name__ == '__main__':

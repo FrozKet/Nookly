@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Пост от {{ post.author.username }} - Nookly</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Стили берем те же самые, чтобы сайт был в едином дизайне -->
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: #f4f7f6; color: #1a1a1a; }
+        .app-container { display: grid; grid-template-columns: 240px minmax(400px, 600px) 280px; gap: 30px; max-width: 1200px; margin: 40px auto; padding: 0 20px; align-items: start; }
+        .card { background: #ffffff; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); margin-bottom: 20px; }
+
+        .sidebar { position: sticky; top: 40px; }
+        .logo { font-size: 28px; font-weight: 700; margin-bottom: 30px; padding-left: 10px; }
+        .menu-item { display: block; padding: 12px 16px; color: #666; text-decoration: none; font-weight: 500; border-radius: 12px; margin-bottom: 5px; transition: all 0.2s; }
+        .menu-item:hover { background: linear-gradient(135deg, #e0f9f3 0%, #d1f4ec 100%); color: #004d40; }
+
+        .feed-header { font-size: 24px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;}
+        .back-btn { text-decoration: none; color: #004d40; background: #e0f9f3; padding: 8px 15px; border-radius: 10px; font-size: 14px; font-weight: bold;}
+
+        /* Стили поста */
+        .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .avatar { width: 40px; height: 40px; background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #004d40; font-size: 18px; }
+        .post-author { font-weight: 600; font-size: 15px; }
+        .post-time { color: #888; font-size: 12px; }
+        .post-content { font-size: 15px; line-height: 1.5; color: #333; }
+        .post-image { width: 100%; border-radius: 12px; margin-top: 15px; object-fit: cover; }
+
+        .post-actions { margin-top: 15px; display: flex; gap: 15px; border-top: 1px solid #f0f0f0; padding-top: 15px; }
+        .action-btn { display: flex; align-items: center; gap: 8px; background: none; border: none; color: #666; font-size: 14px; cursor: pointer; text-decoration: none; }
+        .action-btn.liked { color: #e0245e; font-weight: bold; }
+
+        /* Стили комментариев */
+        .comments-section { margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 15px; }
+        .comment-item { display: flex; gap: 10px; margin-bottom: 12px; }
+        .comment-avatar { width: 32px; height: 32px; background: #e1e4e8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #555; flex-shrink: 0; }
+        .comment-body { background: #f8fafb; padding: 10px 14px; border-radius: 0 16px 16px 16px; width: 100%; }
+        .comment-author { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+        .comment-date { color: #888; font-weight: normal; font-size: 11px; margin-left: 5px; }
+        .comment-text { font-size: 14px; color: #333; }
+        .comment-form { display: flex; gap: 10px; margin-top: 15px; }
+        .comment-input { flex-grow: 1; border: 1px solid #e1e4e8; background: #f8fafb; padding: 10px 16px; border-radius: 20px; font-size: 14px; outline: none; }
+        .comment-submit { background: none; border: none; color: #20b2aa; font-weight: 700; cursor: pointer; padding: 0 10px; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ЛЕВАЯ КОЛОНКА -->
+        <div class="sidebar">
+            <div class="logo">Nookly</div>
+            <nav>
+                <a href="/" class="menu-item">🏠 Главная</a>
+                {% if current_user.is_authenticated %}
+                    <br><br><a href="/logout" class="menu-item" style="color: #d93025;">🚪 Выйти</a>
+                {% else %}
+                    <br><br><a href="/login" class="menu-item" style="color: #1e8e3e;">🔑 Войти</a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА -->
+        <div class="feed">
+            <div class="feed-header">
+                <a href="/" class="back-btn">← Назад</a>
+                Обсуждение
+            </div>
+
+            <!-- САМ ПОСТ -->
+            <div class="card">
+                <div class="post-header">
+                    <div class="avatar">{{ post.author.username[0]|upper }}</div>
+                    <div>
+                        <div class="post-author">{{ post.author.username }}</div>
+                        <div class="post-time">{{ post.date_posted.strftime('%d.%m.%Y в %H:%M') }}</div>
+                    </div>
+                </div>
+                <div class="post-content">{{ post.content }}</div>
+
+                {% if post.image_file %}
+                    <img src="{{ url_for('static', filename='uploads/' + post.image_file) }}" alt="Фото" class="post-image">
+                {% endif %}
+
+                <div class="post-actions">
+                    <!-- Проверка лайка -->
+                    {% set ns = namespace(liked=false) %}
+                    {% if current_user.is_authenticated %}
+                        {% for like in post.likes %}
+                            {% if like.user_id == current_user.id %}{% set ns.liked = true %}{% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    <a href="/like/{{ post.id }}" class="action-btn {% if ns.liked %}liked{% endif %}">
+                        {% if ns.liked %}❤️{% else %}🤍{% endif %} {{ post.likes|length }}
+                    </a>
+
+                    <!-- Кнопка комментов просто показывает число (мы уже на этой странице) -->
+                    <span class="action-btn" style="cursor: default;">💬 {{ post.comments|length }}</span>
+                    <div class="action-btn" style="cursor: default; margin-left: auto;">👁️ {{ post.views }}</div>
+                </div>
+
+                <!-- БЛОК КОММЕНТАРИЕВ (ЗДЕСЬ ЕМУ САМОЕ МЕСТО) -->
+                <div class="comments-section">
+                    {% for comment in post.comments %}
+                        <div class="comment-item">
+                            <div class="comment-avatar">{{ comment.author.username[0]|upper }}</div>
+                            <div class="comment-body">
+                                <div class="comment-author">
+                                    {{ comment.author.username }}
+                                    <span class="comment-date">{{ comment.date_posted.strftime('%d.%m в %H:%M') }}</span>
+                                </div>
+                                <div class="comment-text">{{ comment.text }}</div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div style="text-align: center; color: #888; font-size: 14px; margin: 20px 0;">
+                            Пока нет комментариев. Напишите первым!
+                        </div>
+                    {% endfor %}
+
+                    {% if current_user.is_authenticated %}
+                        <form action="/comment/{{ post.id }}" method="POST" class="comment-form">
+                            <input type="text" name="text" class="comment-input" placeholder="Написать комментарий..." required>
+                            <button type="submit" class="comment-submit">Отправить</button>
+                        </form>
+                    {% else %}
+                        <div style="font-size: 13px; color: #888; text-align: center; margin-top: 15px;">
+                            <a href="/login" style="color: #20b2aa; text-decoration: none;">Войдите</a>, чтобы оставлять комментарии
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА (Оставим пустой или добавим инфу об авторе) -->
+        <div class="right-sidebar">
+            <div class="card" style="text-align: center;">
+                <div class="avatar" style="width: 80px; height: 80px; font-size: 36px; margin: 0 auto 15px;">
+                    {{ post.author.username[0]|upper }}
+                </div>
+                <h3>{{ post.author.username }}</h3>
+                <p style="color: #888; font-size: 14px; margin-top: 10px;">Автор поста</p>
+                <p style="font-size: 13px; font-weight: bold; margin-top: 5px;">Постов: {{ post.author.posts|length }}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

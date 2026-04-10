@@ -6,6 +6,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
+        @keyframes spin { 100% { transform: rotate(360deg); } }
         * {
             box-sizing: border-box;
             margin: 0;
@@ -225,6 +226,7 @@
         <div class="sidebar">
             <div class="logo">Nookly</div>
             <nav>
+
                 <a href="/" class="menu-item active">🏠 Главная</a>
                 <a href="#" class="menu-item">🔥 Популярное</a>
                 <a href="#" class="menu-item">💬 Сообщества</a>
@@ -242,6 +244,16 @@
         <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА -->
         <div class="feed">
             <h1 class="feed-header">Посты</h1>
+            <!-- Блок для flash-сообщений -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="card" style="background-color: #e6f9f0; color: #1e8e3e; border: 1px solid #bce8d1; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
             {% if current_user.is_authenticated %}
                 <!-- Форма создания поста -->
@@ -262,7 +274,7 @@
             {% endif %}
 
             <!-- Лента постов -->
-            {% for post in posts %}
+            {% for post in posts_pagination.items %}
                 <div class="card post-card">
                     <div class="post-header">
                         <!-- Берем первую букву имени для аватарки -->
@@ -311,6 +323,15 @@
                                 🤍 {{ post.likes|length }}
                             </a>
                         {% endif %}
+                                    <!-- НОВАЯ КНОПКА КОММЕНТАРИЕВ (ведет на отдельную страницу) -->
+                        <a href="/post/{{ post.id }}" class="action-btn">
+                            💬 {{ post.comments|length }}
+                        </a>
+
+                        <!-- Иконка просмотров -->
+                        <div class="action-btn" style="cursor: default; margin-left: auto;">
+                            👁️ {{ post.views }}
+                        </div>
                     </div>
                 </div>
             {% else %}
@@ -318,6 +339,15 @@
                     Пока нет ни одного поста. Станьте первым!
                 </div>
             {% endfor %}
+            <!-- Индикатор загрузки (Бесконечная лента) -->
+            <div id="loader" class="card loader-card" style="text-align: center; color: #888; padding: 20px; display: none;">
+                <span style="display: inline-block; animation: spin 1s linear infinite; margin-right: 8px;">↻</span> Подгружаем еще посты...
+            </div>
+
+            <!-- Заглушка, когда посты кончились -->
+            <div id="no-more-posts" class="card" style="text-align: center; color: #ccc; display: none;">
+                Вы посмотрели все посты!
+            </div>
         </div>
 
         <!-- ПРАВАЯ КОЛОНКА -->
@@ -338,6 +368,63 @@
         </div>
 
     </div>
+<script>
+        let currentPage = 1;
+        let loading = false;
+        let hasNext = {{ 'true' if posts_pagination.has_next else 'false' }};
 
+        window.addEventListener('scroll', () => {
+            // Проверяем, докрутил ли пользователь до низа страницы
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+                if (!loading && hasNext) {
+                    loadMorePosts();
+                }
+            }
+        });
+
+        async function loadMorePosts() {
+            loading = true;
+            document.getElementById('loader').style.display = 'block';
+            currentPage++;
+
+            try {
+                // Запрашиваем следующую страницу
+                const response = await fetch(`/?page=${currentPage}`);
+                const html = await response.text();
+
+                // Парсим полученный HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Достаем только карточки постов
+                const newPosts = doc.querySelectorAll('.post-card');
+
+                if (newPosts.length === 0) {
+                    hasNext = false;
+                } else {
+                    // Вставляем новые карточки в ленту
+                    const feed = document.querySelector('.feed');
+                    const loader = document.getElementById('loader');
+                    newPosts.forEach(post => {
+                        feed.insertBefore(post, loader);
+                    });
+
+                    const scriptTag = doc.querySelector('script');
+                    if (scriptTag && scriptTag.innerText.includes('let hasNext = false;')) {
+                        hasNext = false;
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+            }
+
+            loading = false;
+            document.getElementById('loader').style.display = 'none';
+
+            if (!hasNext) {
+                document.getElementById('no-more-posts').style.display = 'block';
+            }
+        }
+    </script>
 </body>
 </html>
