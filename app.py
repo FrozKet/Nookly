@@ -1,10 +1,13 @@
 import os
-from werkzeug.utils import secure_filename
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from datetime import datetime
+import uuid
+from PIL import Image
+from flask import send_from_directory
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'super-secret-nookly-key'
@@ -17,7 +20,7 @@ db = SQLAlchemy(app)
 
 # --- НАСТРОЙКА FLASK-LOGIN ---
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'  # Куда перенаправлять, если неавторизованный юзер лезет в закрытую часть
+login_manager.login_view = 'login'
 login_manager.login_message = "Пожалуйста, войдите, чтобы открыть эту страницу."
 
 
@@ -33,13 +36,18 @@ class Like(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
 
+
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
     author = db.relationship('User', backref='user_comments')
+    replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]), lazy=True,
+                              cascade="all, delete-orphan")
+
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -57,49 +65,30 @@ class Post(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- РОУТЫ (МАРШРУТЫ) ---
+# --- РОУТЫ ---
 
 # 1. Главная страница (Лента постов)
 @app.route('/')
 def index():
+    sort = request.args.get('sort', 'new')
     page = request.args.get('page', 1, type=int)
-    # Отдаем по 5 постов на страницу
-    posts_pagination = Post.query.order_by(Post.date_posted.desc()).paginate(page=page, per_page=5)
 
-    # Накручиваем просмотры
-    for post in posts_pagination.items:
-        post.views += 1
-    db.session.commit()
+    if sort == 'popular':
+        query = Post.query.outerjoin(Like).group_by(Post.id).order_by(db.func.count(Like.id).desc(), Post.date_posted.desc())
+    else:
+        query = Post.query.order_by(Post.date_posted.desc())
 
-    return render_template('index.html', posts_pagination=posts_pagination)
+    posts_pagination = query.paginate(page=page, per_page=5)
 
-# Новый роут для создания поста
-@app.route('/create_post', methods=['POST'])
-@login_required # Только для авторизованных
-def create_post():
-    content = request.form.get('content')
-    image = request.files.get('image')  # Получаем файл из формы
-
-    filename = None
-
-    # Если пользователь прикрепил файл и у файла есть имя
-    if image and image.filename != '':
-        # Обезопасим имя файла
-        filename = secure_filename(image.filename)
-        # Сохраняем файл в папку static/uploads
-        image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
-    # Создаем пост (даже если есть только текст или только картинка)
-    if content or filename:
-        new_post = Post(content=content, image_file=filename, user_id=current_user.id)
-        db.session.add(new_post)
+    if page == 1:
+        for post in posts_pagination.items:
+            post.views += 1
         db.session.commit()
-        flash('Пост успешно опубликован!', 'success')
 
-    return redirect(url_for('index'))
+    return render_template('index.html', posts_pagination=posts_pagination, sort=sort)
 
 
-# 2. Регистрация (осталась почти такой же)
+# 2. Регистрация
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -122,20 +111,18 @@ def register():
     return render_template('register.html')
 
 
-# 3. Вход (Логин)
+# 3. Вход
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
 
-        # Ищем пользователя в базе
         user = User.query.filter_by(username=username).first()
 
-        # Если юзер есть и пароль (расшифрованный) совпадает
         if user and check_password_hash(user.password_hash, password):
-            login_user(user)  # Запоминаем юзера в сессии
-            return redirect(url_for('index'))  # Отправляем на главную
+            login_user(user)
+            return redirect(url_for('index'))
         else:
             flash('Неверное имя пользователя или пароль.', 'error')
 
@@ -144,38 +131,40 @@ def login():
 
 # 4. Выход из аккаунта
 @app.route('/logout')
-@login_required  # Доступно только авторизованным
+@login_required
 def logout():
-    logout_user()  # Удаляем юзера из сессии
+    logout_user()
     return redirect(url_for('index'))
 
+
 # 5. Оценки
-@app.route('/like/<int:post_id>')
+@app.route('/like/<int:post_id>', methods=['POST'])
 @login_required
 def like_post(post_id):
-    # Ищем, ставил ли уже этот юзер лайк этому посту
+    post = Post.query.get_or_404(post_id)
     like = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
 
     if like:
-        # Если лайк уже есть — удаляем его (убираем лайк)
         db.session.delete(like)
+        liked = False
     else:
-        # Если лайка нет — создаем новый
         new_like = Like(user_id=current_user.id, post_id=post_id)
         db.session.add(new_like)
+        liked = True
 
     db.session.commit()
-    # Возвращаемся на главную страницу, где были
-    return redirect(url_for('index'))
+
+    return jsonify({
+        'liked': liked,
+        'likes_count': len(post.likes)
+    })
 
 
 # 6. Посты
 @app.route('/post/<int:post_id>')
 def view_post(post_id):
-    # Ищем пост в базе. Если такого ID нет, Flask сам выдаст ошибку 404
     post = Post.query.get_or_404(post_id)
 
-    # Добавим +1 просмотр за то, что человек открыл пост полностью
     post.views += 1
     db.session.commit()
 
@@ -187,15 +176,67 @@ def view_post(post_id):
 @login_required
 def add_comment(post_id):
     text = request.form.get('text')
+    parent_id = request.form.get('parent_id')
+
     if text:
-        new_comment = Comment(text=text, post_id=post_id, user_id=current_user.id)
+        new_comment = Comment(
+            text=text,
+            post_id=post_id,
+            user_id=current_user.id,
+            parent_id=parent_id if parent_id else None
+        )
         db.session.add(new_comment)
         db.session.commit()
-    # Теперь редирект идет на страницу поста, а не на главную!
+
     return redirect(url_for('view_post', post_id=post_id))
 
+
+# 8. Скрытие пути картинок
+@app.route('/media/<string:filename>')
+def serve_image(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+# 9. Создание постов
+@app.route('/create_post', methods=['POST'])
+@login_required
+def create_post():
+    content = request.form.get('content')
+    image = request.files.get('image')
+
+    filename = None
+    sezi = 20 * 1024 * 1024
+
+    if image and image.filename != '':
+        image.seek(0, os.SEEK_END)
+        file_size = image.tell()
+        image.seek(0)
+
+        if file_size > sezi:
+            flash('Файл слишком большой! Максимальный размер 20 МБ.', 'error')
+            return redirect(url_for('index'))
+
+        ext = image.filename.rsplit('.', 1)[1].lower() if '.' in image.filename else 'jpg'
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+        img = Image.open(image)
+
+        if img.mode in ("RGBA", "P"):
+            img.save(filepath)
+        else:
+            img = img.convert("RGB")
+            img.save(filepath)
+
+    if content or filename:
+        new_post = Post(content=content, image_file=filename, user_id=current_user.id)
+        db.session.add(new_post)
+        db.session.commit()
+        flash('Пост успешно опубликован!', 'success')
+
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Nookly{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ЦВЕТОВЫЕ ПЕРЕМЕННЫЕ */
+        :root {
+            --bg-color: #f4f7f6; --card-bg: #ffffff; --text-main: #1a1a1a; --text-muted: #888888;
+            --input-bg: #f8fafb; --input-border: #e1e4e8; --input-focus: #ffffff;
+            --brand-grad: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); --brand-text: #004d40;
+            --card-shadow: rgba(0,0,0,0.05);
+            --error-bg: #ffeaea; --error-text: #d93025; --error-border: #f5c2c2;
+            --success-bg: #e6f9f0; --success-text: #1e8e3e; --success-border: #bce8d1;
+        }
+
+        html.dark-theme {
+            --bg-color: #0b0c10; --card-bg: #1a1c23; --text-main: #e0e6ed; --text-muted: #8b92a5;
+            --input-bg: #121418; --input-border: #2d3139; --input-focus: #1a1c23;
+            --brand-grad: linear-gradient(135deg, #8de5d2 0%, #5ec7b1 100%); --brand-text: #002b24;
+            --card-shadow: rgba(0,0,0,0.3);
+            --error-bg: rgba(217, 48, 37, 0.1); --error-text: #ff7b72; --error-border: rgba(217, 48, 37, 0.3);
+            --success-bg: rgba(30, 142, 62, 0.1); --success-text: #57ab5a; --success-border: rgba(30, 142, 62, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body, .card, input { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
+
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; height: 100vh; }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: var(--card-bg); width: 100%; max-width: 400px; padding: 40px; border-radius: 24px; box-shadow: 0 20px 40px var(--card-shadow); text-align: center; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .logo { font-size: 32px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
+        .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+        input { width: 100%; padding: 16px; margin-bottom: 16px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-main); border-radius: 16px; font-size: 15px; outline: none; }
+        input:focus { border-color: #9eebdd; background-color: var(--input-focus); box-shadow: 0 0 0 4px rgba(158, 235, 221, 0.2); }
+        button.submit-btn { width: 100%; padding: 16px; background: var(--brand-grad); color: var(--brand-text); font-weight: 600; font-size: 16px; border: none; border-radius: 16px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; margin-top: 10px; }
+        button.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(141, 229, 210, 0.2); }
+        .footer-text { margin-top: 25px; font-size: 14px; color: var(--text-muted); }
+        .footer-text a { color: #20b2aa; text-decoration: none; font-weight: 600; transition: color 0.2s; }
+        .footer-text a:hover { color: #16807a; text-decoration: underline; }
+
+        .flash { padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 20px; font-weight: 500; }
+        .flash.error { background-color: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-border); }
+        .flash.success { background-color: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+
+        /* КНОПКА СМЕНЫ ТЕМЫ И ИКОНКИ */
+        .theme-toggle-btn { position: fixed; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main); display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 5px 15px var(--card-shadow); transition: transform 0.2s, background-color 0.3s; z-index: 10000; }
+        .theme-toggle-btn:hover { transform: scale(1.1); }
+        .theme-toggle-btn svg { width: 22px; height: 22px; transition: all 0.3s ease; }
+
+        /* Логика показа/скрытия нужной SVG */
+        .sun-icon { display: none; }
+        .moon-icon { display: block; }
+        html.dark-theme .sun-icon { display: block; }
+        html.dark-theme .moon-icon { display: none; }
+    </style>
+    <script>
+        if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark-theme'); }
+    </script>
+</head>
+<body>
+    <button id="theme-toggle" class="theme-toggle-btn" title="Сменить тему">
+        <!-- Солнце (Скрыто в светлой теме) -->
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 19a1 1 0 0 1 .993 .883l.007 .117v1a1 1 0 0 1 -1.993 .117l-.007 -.117v-1a1 1 0 0 1 1 -1z" /><path d="M18.313 16.91l.094 .083l.7 .7a1 1 0 0 1 -1.32 1.497l-.094 -.083l-.7 -.7a1 1 0 0 1 1.218 -1.567l.102 .07z" /><path d="M7.007 16.993a1 1 0 0 1 .083 1.32l-.083 .094l-.7 .7a1 1 0 0 1 -1.497 -1.32l.083 -.094l.7 -.7a1 1 0 0 1 1.414 0z" /><path d="M4 11a1 1 0 0 1 .117 1.993l-.117 .007h-1a1 1 0 0 1 -.117 -1.993l.117 -.007h1z" /><path d="M21 11a1 1 0 0 1 .117 1.993l-.117 .007h-1a1 1 0 0 1 -.117 -1.993l.117 -.007h1z" /><path d="M6.213 4.81l.094 .083l.7 .7a1 1 0 0 1 -1.32 1.497l-.094 -.083l-.7 -.7a1 1 0 0 1 1.217 -1.567l.102 .07z" /><path d="M19.107 4.893a1 1 0 0 1 .083 1.32l-.083 .094l-.7 .7a1 1 0 0 1 -1.497 -1.32l.083 -.094l.7 -.7a1 1 0 0 1 1.414 0z" /><path d="M12 2a1 1 0 0 1 .993 .883l.007 .117v1a1 1 0 0 1 -1.993 .117l-.007 -.117v-1a1 1 0 0 1 1 -1z" /><path d="M12 7a5 5 0 1 1 -4.995 5.217l-.005 -.217l.005 -.217a5 5 0 0 1 4.995 -4.783z" /></svg>
+        <!-- Луна (Скрыто в темной теме) -->
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 1.992a10 10 0 1 0 9.236 13.838c.341 -.82 -.476 -1.644 -1.298 -1.31a6.5 6.5 0 0 1 -6.864 -10.787l.077 -.08c.551 -.63 .113 -1.653 -.758 -1.653h-.266l-.068 -.006l-.06 -.002z" /></svg>
+    </button>
+
+    <div class="card">
+        <div class="logo">Nookly</div>
+        <p class="subtitle">{% block subtitle %}{% endblock %}</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <style> form button { @extend .submit-btn; width: 100%; padding: 16px; background: var(--brand-grad); color: var(--brand-text); font-weight: 600; font-size: 16px; border: none; border-radius: 16px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; margin-top: 10px; } form button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(141, 229, 210, 0.2); } </style>
+
+        {% block content %}{% endblock %}
+
+        <div class="footer-text">
+            {% block footer %}{% endblock %}
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark-theme');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+    </script>
+</body>
+</html>
