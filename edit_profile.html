@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nookly - Редактирование профиля</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: #f4f7f6; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+
+        .edit-container { max-width: 500px; width: 100%; margin: 40px 20px; }
+        .card { background: #ffffff; border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+
+        h1 { font-size: 28px; font-weight: 700; margin-bottom: 30px; color: #004d40; }
+
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 10px; font-weight: 600; color: #333; }
+
+        .current-avatar { margin: 15px 0; }
+        .avatar-preview { width: 100px; height: 100px; background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #004d40; font-size: 40px; object-fit: cover; }
+
+        .form-control { width: 100%; padding: 12px 16px; border: 1px solid #e0e0e0; border-radius: 12px; font-size: 14px; background: #f8fafb; transition: all 0.2s; }
+        .form-control:focus { outline: none; border-color: #a8f0e1; background: white; box-shadow: 0 0 0 3px rgba(168, 240, 225, 0.1); }
+        textarea.form-control { resize: vertical; min-height: 120px; }
+        input[type="file"].form-control { padding: 10px; }
+
+        small { display: block; margin-top: 8px; color: #888; font-size: 12px; }
+
+        .form-actions { display: flex; gap: 15px; margin-top: 30px; }
+        .btn { padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; text-align: center; flex: 1; }
+        .btn-primary { background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); color: #004d40; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(158, 235, 221, 0.3); }
+        .btn-outline { background: #f8fafb; color: #004d40; border: 1px solid #a8f0e1; }
+        .btn-outline:hover { background: #e0f9f3; }
+
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; }
+        .back-link:hover { color: #004d40; }
+
+        @media (max-width: 768px) {
+            .card { padding: 20px; }
+            .form-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="edit-container">
+    <div class="card">
+        <h1>Редактирование профиля</h1>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Текущий аватар</label>
+                <div class="current-avatar">
+                    {% if current_user.avatar %}
+                    <img src="/media/{{ current_user.avatar }}" alt="Аватар" class="avatar-preview">
+                    {% else %}
+                    <div class="avatar-preview">{{ current_user.username[0]|upper }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="avatar">Новый аватар</label>
+                <input type="file" id="avatar" name="avatar" accept="image/*" class="form-control">
+                <small>Рекомендуемый размер: 150x150 пикселей</small>
+            </div>
+
+            <div class="form-group">
+                <label for="bio">О себе</label>
+                <textarea id="bio" name="bio" rows="4" class="form-control" placeholder="Расскажите о себе...">{{ current_user.bio }}</textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <a href="/profile/{{ current_user.username }}" class="btn btn-outline">Отмена</a>
+            </div>
+        </form>
+    </div>
+    <a href="/profile/{{ current_user.username }}" class="back-link">← Вернуться в профиль</a>
+</div>
+</body>
+</html>
