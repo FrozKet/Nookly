@@ -6,7 +6,7 @@
 <style>
     .comments-section { margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; }
     .comment-item { display: flex; gap: 10px; margin-bottom: 12px; }
-    .comment-avatar { width: 32px; height: 32px; background: var(--input-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: var(--text-main); flex-shrink: 0; }
+    .comment-avatar { width: 32px; height: 32px; background: var(--input-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: var(--text-main); flex-shrink: 0; object-fit: cover; }
     .comment-body { background: var(--input-bg); padding: 10px 14px; border-radius: 0 16px 16px 16px; width: 100%; color: var(--text-main); }
     .comment-author { font-size: 13px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
     .comment-date { color: var(--text-muted); font-weight: normal; font-size: 11px; margin-left: 5px; }
@@ -32,7 +32,11 @@
 {% block content %}
 <div class="card">
     <div class="post-header">
+        {% if post.author.avatar and post.author.avatar != 'default_avatar.png' %}
+        <img src="/media/{{ post.author.avatar }}" alt="{{ post.author.username }}" class="avatar">
+        {% else %}
         <div class="avatar">{{ post.author.username[0]|upper }}</div>
+        {% endif %}
         <div>
             <div class="post-author">{{ post.author.username }}</div>
             <div class="post-time local-time" data-time="{{ post.date_posted.isoformat() }}"></div>
@@ -54,7 +58,7 @@
 
         {% if current_user.is_authenticated %}
             <button onclick="toggleLike(event, {{ post.id }}, this)" class="action-btn {% if ns.liked %}liked{% endif %}">
-                <span class="like-icon">{% if ns.liked %}❤️{% else %}🤍{% endif %}</span> 
+                <span class="like-icon">{% if ns.liked %}❤️{% else %}🤍{% endif %}</span>
                 <span class="like-count">{{ post.likes|length }}</span>
             </button>
         {% else %}
@@ -79,7 +83,11 @@
 
         {% macro render_comment(comment) %}
             <div class="comment-item">
+                {% if comment.author.avatar and comment.author.avatar != 'default_avatar.png' %}
+                <img src="/media/{{ comment.author.avatar }}" alt="{{ comment.author.username }}" class="comment-avatar">
+                {% else %}
                 <div class="comment-avatar">{{ comment.author.username[0]|upper }}</div>
+                {% endif %}
                 <div class="comment-body" style="width: 100%;">
                     <div class="comment-author">
                         {{ comment.author.username }}
@@ -127,9 +135,13 @@
 
 {% block right_sidebar %}
 <div class="card" style="text-align: center;">
+    {% if post.author.avatar and post.author.avatar != 'default_avatar.png' %}
+    <img src="/media/{{ post.author.avatar }}" alt="{{ post.author.username }}" class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px;">
+    {% else %}
     <div class="avatar" style="width: 80px; height: 80px; font-size: 36px; margin: 0 auto 15px;">
         {{ post.author.username[0]|upper }}
     </div>
+    {% endif %}
     <h3 style="color: var(--text-main);">{{ post.author.username }}</h3>
     <p style="color: var(--text-muted); font-size: 14px; margin-top: 10px;">Автор поста</p>
     <p style="color: var(--text-main); font-size: 13px; font-weight: bold; margin-top: 5px;">Постов: {{ post.author.posts|length }}</p>

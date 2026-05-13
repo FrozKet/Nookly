@@ -1,134 +1,283 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nookly - Лента</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: #f4f7f6; color: #1a1a1a; }
+        .mobile-header { display: none; background: #ffffff; padding: 15px 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05); justify-content: space-between; align-items: center; }
+        .mobile-logo { font-size: 20px; font-weight: 700; }
+        .app-container { display: grid; grid-template-columns: 240px minmax(400px, 600px) 280px; gap: 30px; max-width: 1200px; margin: 40px auto; padding: 0 20px; align-items: start; transition: all 0.3s ease; }
+        .card { background: #ffffff; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); margin-bottom: 20px; }
+        .sidebar { position: sticky; top: 40px; }
+        .logo { font-size: 28px; font-weight: 700; margin-bottom: 30px; padding-left: 10px; }
+        .menu-item { display: block; padding: 12px 16px; color: #666; text-decoration: none; font-weight: 500; border-radius: 12px; margin-bottom: 5px; transition: all 0.2s; }
+        .menu-item:hover, .menu-item.active { background: linear-gradient(135deg, #e0f9f3 0%, #d1f4ec 100%); color: #004d40; }
+        .feed-header { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
+        .create-post-card { display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 40px rgba(158, 235, 221, 0.2); }
+        .create-post-input { width: 100%; border: none; background: #f8fafb; padding: 16px; border-radius: 16px; font-size: 15px; resize: none; outline: none; }
+        .create-post-input:focus { background: #fff; box-shadow: inset 0 0 0 2px #9eebdd; }
+        .post-btn { align-self: flex-end; padding: 10px 24px; background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); color: #004d40; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: transform 0.2s; }
+        .post-btn:hover { transform: translateY(-2px); }
+        .post-card { transition: transform 0.2s; }
+        .post-card:hover { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(158, 235, 221, 0.15); }
+        .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .avatar { width: 40px; height: 40px; background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #004d40; font-size: 18px; object-fit: cover; }
+        .post-author { font-weight: 600; font-size: 15px; text-decoration: none; color: inherit; }
+        .post-author:hover { text-decoration: underline; }
+        .post-time { color: #888; font-size: 12px; }
+        .post-content { font-size: 15px; line-height: 1.5; color: #333; }
+        .right-sidebar { position: sticky; top: 40px; }
+        .widget-title { font-weight: 600; margin-bottom: 15px; font-size: 16px; }
+        .topic-item { padding: 8px 0; color: #555; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+        .topic-item:last-child { border-bottom: none; }
+        .login-prompt { text-align: center; padding: 40px; }
+        .post-image { width: 100%; border-radius: 12px; margin-top: 15px; object-fit: cover; }
+        .file-upload-container { display: flex; justify-content: space-between; align-items: center; }
+        .file-input { font-size: 14px; color: #666; }
+        .post-actions { margin-top: 15px; display: flex; gap: 15px; border-top: 1px solid #f0f0f0; padding-top: 15px; }
+        .action-btn { display: flex; align-items: center; gap: 8px; background: none; border: none; color: #666; font-size: 14px; cursor: pointer; text-decoration: none; transition: color 0.2s; }
+        .action-btn:hover { color: #1a1a1a; }
+        .action-btn.liked { color: #e0245e; font-weight: bold; }
+        .profile-link-btn { display: inline-block; padding: 8px 16px; background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); color: #004d40; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: transform 0.2s; }
+        .profile-link-btn:hover { transform: translateY(-2px); }
+        @media (max-width: 1024px) {
+            .app-container { grid-template-columns: 80px 1fr; gap: 20px; margin: 20px auto; }
+            .right-sidebar, .logo { display: none; }
+            .menu-item span { display: none; }
+            .menu-item { text-align: center; font-size: 20px; padding: 15px 5px; }
+        }
+        @media (max-width: 768px) {
+            .mobile-header { display: flex; }
+            .app-container { grid-template-columns: 1fr; margin: 0 auto; padding: 10px; padding-bottom: 80px; }
+            .sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; background: #ffffff; box-shadow: 0 -2px 15px rgba(0,0,0,0.05); z-index: 1000; padding: 10px 5px; }
+            .sidebar nav { display: flex; justify-content: space-around; align-items: center; }
+            .menu-item { margin-bottom: 0; border-radius: 10px; padding: 10px 15px; display: flex; flex-direction: column; align-items: center; font-size: 18px; }
+            .sidebar br, .feed-header { display: none; }
+            .card { border-radius: 16px; padding: 15px; margin-bottom: 10px; }
+            .file-upload-container { flex-direction: column; gap: 10px; align-items: stretch; }
+            .post-btn { width: 100%; text-align: center; }
+        }
+        .menu-item svg { vertical-align: middle; margin-right: 5px; }
+    </style>
+</head>
+<body>
 
-{% block title %}Nookly - Лента{% endblock %}
-
-{% block extra_css %}
-<style>
-    .create-post-card { display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 40px var(--shadow-color); }
-    .create-post-input { width: 100%; border: 1px solid var(--border-color); background: var(--input-bg); padding: 16px; border-radius: 16px; font-size: 15px; color: var(--text-main); resize: none; outline: none; }
-    .create-post-input:focus { background: var(--input-focus); border-color: var(--brand-color); box-shadow: inset 0 0 0 1px var(--brand-color); }
-    .post-btn { padding: 10px 24px; background: var(--brand-grad); color: var(--brand-text); border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: transform 0.2s; }
-    .post-btn:hover { transform: translateY(-2px); }
-    .file-upload-container { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 15px; }
-    .upload-actions { display: flex; align-items: center; gap: 12px; }
-    .upload-icon-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--input-border); color: var(--text-main); cursor: pointer; transition: all 0.2s; }
-    .upload-icon-btn:hover { background: var(--hover-bg); color: var(--brand-color); transform: scale(1.05); }
-    .file-name-preview { font-size: 13px; color: var(--text-muted); max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
-    .login-prompt { text-align: center; padding: 40px; color: var(--text-main);}
-</style>
-{% endblock %}
-
-{% block feed_header %}
-<h1 class="feed-header">Посты</h1>
-{% endblock %}
-
-{% block content %}
+<div class="mobile-header">
+    <div class="mobile-logo">Nookly</div>
     {% if current_user.is_authenticated %}
+    <a href="/profile/{{ current_user.username }}" style="text-decoration: none; color: #1e8e3e; font-weight: 600; font-size: 14px;">Профиль</a>
+    <a href="/logout" style="text-decoration: none; color: #d93025; font-weight: 600; font-size: 14px;">Выйти</a>
+    {% else %}
+    <a href="/login" style="text-decoration: none; color: #1e8e3e; font-weight: 600; font-size: 14px;">Войти</a>
+    {% endif %}
+</div>
+
+<div class="app-container">
+    <div class="sidebar">
+        <div class="logo">Nookly</div>
+        <nav>
+            <a href="/?sort=new" class="menu-item {% if sort != 'popular' %}active{% endif %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M12.707 2.293l9 9c.63 .63 .184 1.707 -.707 1.707h-1v6a3 3 0 0 1 -3 3h-1v-7a3 3 0 0 0 -2.824 -2.995l-.176 -.005h-2a3 3 0 0 0 -3 3v7h-1a3 3 0 0 1 -3 -3v-6h-1c-.89 0 -1.337 -1.077 -.707 -1.707l9 -9a1 1 0 0 1 1.414 0m.293 11.707a1 1 0 0 1 1 1v7h-4v-7a1 1 0 0 1 .883 -.993l.117 -.007z"/>
+                </svg>
+                <span>Главная</span></a>
+            <a href="/?sort=popular" class="menu-item {% if sort == 'popular' %}active{% endif %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78"/>
+                </svg>
+                <span>Популярное</span></a>
+
+            {% if current_user.is_authenticated %}
+            <a href="/profile/{{ current_user.username }}" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M12 2a5 5 0 1 1 -5 5l.005 -.217a5 5 0 0 1 4.995 -4.783zm0 18c-4.418 0 -8 -2.015 -8 -4.5s3.582 -4.5 8 -4.5s8 2.015 8 4.5s-3.582 4.5 -8 4.5z"/>
+                </svg>
+                <span>Профиль</span>
+            </a>
+            <br><br><a href="/logout" class="menu-item pc-only" style="color: #d93025;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M12 5a1 1 0 0 1 0 2h-6a1 1 0 0 0 -1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1 -1v-6a1 1 0 0 1 2 0v6a3 3 0 0 1 -3 3h-10a3 3 0 0 1 -3 -3v-10a3 3 0 0 1 3 -3zm3 -2h5l.075 .003l.126 .017l.111 .03l.111 .044l.098 .052l.096 .067l.09 .08q .054 .053 .097 .112l.071 .11l.054 .114l.035 .105l.03 .148l.006 .118v5a1 1 0 0 1 -2 0v-2.586l-7.293 7.293a1 1 0 0 1 -1.414 -1.414l7.291 -7.293h-2.584a1 1 0 0 1 0 -2"/>
+            </svg>
+            <span>Выйти</span></a>
+            {% else %}
+            <br><br><a href="/login" class="menu-item pc-only" style="color: #1e8e3e;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M14.52 2c1.029 0 2.015 .409 2.742 1.136l3.602 3.602a3.877 3.877 0 0 1 0 5.483l-2.643 2.643a3.88 3.88 0 0 1 -4.941 .452l-.105 -.078l-5.882 5.883a3 3 0 0 1 -1.68 .843l-.22 .027l-.221 .009h-1.172c-1.014 0 -1.867 -.759 -1.991 -1.823l-.009 -.177v-1.172c0 -.704 .248 -1.386 .73 -1.96l.149 -.161l.414 -.414a1 1 0 0 1 .707 -.293h1v-1a1 1 0 0 1 .883 -.993l.117 -.007h1v-1a1 1 0 0 1 .206 -.608l.087 -.1l1.468 -1.469l-.076 -.103a3.9 3.9 0 0 1 -.678 -1.963l-.007 -.236c0 -1.029 .409 -2.015 1.136 -2.742l2.643 -2.643a3.88 3.88 0 0 1 2.741 -1.136m.495 5h-.02a2 2 0 1 0 0 4h.02a2 2 0 1 0 0 -4"/>
+            </svg>
+            <span>Войти</span></a>
+            {% endif %}
+        </nav>
+    </div>
+
+    <div class="feed">
+        <h1 class="feed-header">Посты</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="card" style="background-color: #e6f9f0; color: #1e8e3e; border: 1px solid #bce8d1; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% if current_user.is_authenticated %}
+        <div style="margin-bottom: 15px; text-align: right;">
+            <a href="/profile/{{ current_user.username }}" class="profile-link-btn">👤 Мой профиль</a>
+        </div>
         <form class="card create-post-card" action="/create_post" method="POST" enctype="multipart/form-data">
             <textarea class="create-post-input" name="content" rows="3" placeholder="Что у вас нового, {{ current_user.username }}?"></textarea>
             <div class="file-upload-container">
-                <div class="upload-actions">
-                    <label for="image-upload" class="upload-icon-btn" title="Прикрепить фото">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                    </label>
-                    <span id="file-name" class="file-name-preview"></span>
-                    <input type="file" id="image-upload" name="image" accept="image/*" style="display: none;" onchange="handleFileUpload(this)">
-                </div>
+                <input type="file" name="image" class="file-input" accept="image/*">
                 <button type="submit" class="post-btn">Опубликовать</button>
             </div>
         </form>
-    {% else %}
+        {% else %}
         <div class="card login-prompt">
             <h3>Войдите, чтобы создавать посты</h3>
-            <p style="color: var(--text-muted); margin-top: 10px;">Присоединяйтесь к Nookly прямо сейчас!</p>
+            <p style="color: #888; margin-top: 10px;">Присоединяйтесь к Nookly прямо сейчас!</p>
         </div>
-    {% endif %}
+        {% endif %}
 
-    {% for post in posts_pagination.items %}
+        {% for post in posts_pagination.items %}
         <div class="card post-card">
-            <a href="/post/{{ post.id }}" class="post-link">
-                <div class="post-header">
-                    <div class="avatar">{{ post.author.username[0]|upper }}</div>
-                    <div>
-                        <div class="post-author">{{ post.author.username }}</div>
-                        <div class="post-time local-time" data-time="{{ post.date_posted.isoformat() }}"></div>
-                    </div>
-                </div>
-                <div class="post-content">{{ post.content }}</div>
-                {% if post.image_file %}
-                    <img src="/media/{{ post.image_file }}" alt="Фото поста" class="post-image">
+            <div class="post-header">
+                {% if post.author.avatar and post.author.avatar != 'default_avatar.png' %}
+                <img src="/media/{{ post.author.avatar }}" alt="{{ post.author.username }}" class="avatar">
+                {% else %}
+                <div class="avatar">{{ post.author.username[0]|upper }}</div>
                 {% endif %}
-            </a>
+                <div>
+                    <a href="/profile/{{ post.author.username }}" class="post-author">{{ post.author.username }}</a>
+                    <div class="post-time">{{ post.date_posted.strftime('%d.%m.%Y в %H:%M') }}</div>
+                </div>
+            </div>
+            <div class="post-content">
+                {{ post.content }}
+            </div>
+
+            {% if post.image_file %}
+            <img src="/media/{{ post.image_file }}" alt="Фото поста" class="post-image">
+            {% endif %}
+
             <div class="post-actions">
                 {% set ns = namespace(liked=false) %}
                 {% if current_user.is_authenticated %}
-                    {% for like in post.likes %}
-                        {% if like.user_id == current_user.id %}{% set ns.liked = true %}{% endif %}
-                    {% endfor %}
+                {% for like in post.likes %}
+                {% if like.user_id == current_user.id %}
+                {% set ns.liked = true %}
+                {% endif %}
+                {% endfor %}
                 {% endif %}
 
                 {% if current_user.is_authenticated %}
-                    <button onclick="toggleLike(event, {{ post.id }}, this)" class="action-btn {% if ns.liked %}liked{% endif %}">
-                        <span class="like-icon">{% if ns.liked %}❤️{% else %}🤍{% endif %}</span> 
-                        <span class="like-count">{{ post.likes|length }}</span>
-                    </button>
+                <a href="/like/{{ post.id }}" class="action-btn {% if ns.liked %}liked{% endif %}">
+                    {% if ns.liked %} ❤️ {% else %} 🤍 {% endif %} {{ post.likes|length }}
+                </a>
                 {% else %}
-                    <a href="/login" class="action-btn"><span class="like-icon">🤍</span> <span class="like-count">{{ post.likes|length }}</span></a>
+                <a href="/login" class="action-btn">🤍 {{ post.likes|length }}</a>
                 {% endif %}
 
                 <a href="/post/{{ post.id }}" class="action-btn">💬 {{ post.comments|length }}</a>
                 <div class="action-btn" style="cursor: default; margin-left: auto;">👁️ {{ post.views }}</div>
             </div>
         </div>
-    {% else %}
-        <div class="card" style="text-align: center; padding: 40px; color: var(--text-muted);">Пока нет ни одного поста. Станьте первым!</div>
-    {% endfor %}
+        {% else %}
+        <div class="card" style="text-align: center; padding: 40px; color: #888;">
+            Пока нет ни одного поста. Станьте первым!
+        </div>
+        {% endfor %}
 
-    <div id="loader" class="card loader-card" style="text-align: center; color: var(--text-muted); padding: 20px; display: none;">
-        <span style="display: inline-block; animation: spin 1s linear infinite; margin-right: 8px;">↻</span> Подгружаем еще посты...
+        <div id="loader" class="card loader-card" style="text-align: center; color: #888; padding: 20px; display: none;">
+            <span style="display: inline-block; animation: spin 1s linear infinite; margin-right: 8px;">↻</span>
+            Подгружаем еще посты...
+        </div>
+        <div id="no-more-posts" class="card" style="text-align: center; color: #ccc; display: none;">
+            Вы посмотрели все посты!
+        </div>
     </div>
-    <div id="no-more-posts" class="card" style="text-align: center; color: var(--border-color); display: none;">Вы посмотрели все посты!</div>
-{% endblock %}
 
-{% block scripts %}
+    <div class="right-sidebar">
+        <div class="card">
+            <div class="widget-title">Популярные темы</div>
+            <div class="topic-item">1. #БлогерствоДляНачинающих</div>
+            <div class="topic-item">2. #ДизайнИнтерфейсов</div>
+            <div class="topic-item">3. #PythonFlask</div>
+            <div class="topic-item">4. #NooklyТоп</div>
+        </div>
+        <div class="card" style="background: linear-gradient(135deg, #a8f0e1 0%, #8de5d2 100%); text-align: center; border: none;">
+            <div class="widget-title" style="color: #004d40;">Nookly Premium</div>
+            <p style="font-size: 13px; color: #004d40; margin-bottom: 10px;">Поддержите проект и получите галочку!</p>
+            <button style="background: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; color: #004d40; cursor: pointer;">
+                Узнать больше
+            </button>
+        </div>
+    </div>
+
+</div>
+
 <script>
-    function handleFileUpload(input) {
-        const fileNameSpan = document.getElementById('file-name');
-        if (input.files && input.files.length > 0) {
-            if (input.files[0].size > 5 * 1024 * 1024) {
-                showCustomAlert('Файл слишком большой. Максимальный размер 5 МБ.', 'error');
-                input.value = '';
-                fileNameSpan.textContent = '';
-                return;
-            }
-            fileNameSpan.textContent = input.files[0].name;
-        } else { fileNameSpan.textContent = ''; }
-    }
+    let currentPage = 1;
+    let loading = false;
+    let hasNext = {{ 'true' if posts_pagination.has_next else 'false' }};
 
-    let currentPage = 1; let loading = false; let hasNext = {{ 'true' if posts_pagination.has_next else 'false' }};
     window.addEventListener('scroll', () => {
-        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) { if (!loading && hasNext) loadMorePosts(); }
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+            if (!loading && hasNext) {
+                loadMorePosts();
+            }
+        }
     });
 
     async function loadMorePosts() {
-        loading = true; document.getElementById('loader').style.display = 'block'; currentPage++;
+        loading = true;
+        document.getElementById('loader').style.display = 'block';
+        currentPage++;
+
         try {
             const currentSort = new URLSearchParams(window.location.search).get('sort') || 'new';
             const response = await fetch(`/?page=${currentPage}&sort=${currentSort}`);
+
             const html = await response.text();
-            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
             const newPosts = doc.querySelectorAll('.post-card');
-            if (newPosts.length === 0) hasNext = false;
-            else {
+
+            if (newPosts.length === 0) {
+                hasNext = false;
+            } else {
                 const feed = document.querySelector('.feed');
                 const loader = document.getElementById('loader');
-                newPosts.forEach(post => feed.insertBefore(post, loader));
-                formatLocalTime();
-                if (doc.querySelector('script') && doc.querySelector('script').innerText.includes('let hasNext = false;')) hasNext = false;
+                newPosts.forEach(post => {
+                    feed.insertBefore(post, loader);
+                });
+
+                const scriptTag = doc.querySelector('script');
+                if (scriptTag && scriptTag.innerText.includes('let hasNext = false;')) {
+                    hasNext = false;
+                }
             }
-        } catch (error) { console.error(error); }
-        loading = false; document.getElementById('loader').style.display = 'none';
-        if (!hasNext) document.getElementById('no-more-posts').style.display = 'block';
+        } catch (error) {
+            console.error('Ошибка загрузки:', error);
+        }
+
+        loading = false;
+        document.getElementById('loader').style.display = 'none';
+
+        if (!hasNext) {
+            document.getElementById('no-more-posts').style.display = 'block';
+        }
     }
 </script>
-{% endblock %}
+</body>
+</html>
